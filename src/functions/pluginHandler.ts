@@ -16,21 +16,19 @@ const commands: CommandInfo[] = [];
  * @param {Function} func - The function to execute when the command is triggered.
  * @returns {CommandInfo} - The command information.
  */
+
 function command(commandInfo: CommandInfo, func: Function): CommandInfo {
   commandInfo.function = func;
   if (commandInfo.pattern) {
-    commandInfo.pattern =
-      new RegExp(
-        `(${HANDLERS})( ?${commandInfo.pattern}(?=\\b|$))(.*)`,
-        "is"
-      ) || false;
-  }
-  
-  commandInfo.dontAddCommandList = commandInfo.dontAddCommandList || false;
-  commandInfo.fromMe = commandInfo.fromMe || false;
-  commandInfo.type = commandInfo.type || "misc";
+    commandInfo.pattern = new RegExp(
+      `^${commandInfo.pattern}$`,
+      "is"
+    );
 
+    
+  }
   commands.push(commandInfo);
+
   return commandInfo;
 }
 

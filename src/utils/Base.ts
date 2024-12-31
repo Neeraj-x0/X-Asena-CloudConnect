@@ -43,9 +43,7 @@ export class Base {
     if (!changes) {
       throw new Error("Invalid data format.");
     }
-
     const contactInfo = changes.contacts?.[0];
-
     if (changes.messages) {
       const message = changes.messages[0];
       this.id = message.id;
@@ -134,13 +132,13 @@ export class Base {
       formData.append(
         "file",
         new Blob([buffer], { type: mimeType || "unknown" }),
-        `file.${ext}`
+        `file.${ext}` 
       );
       formData.append("type", mediaType || "file");
       formData.append("messaging_product", "whatsapp");
 
       const config: AxiosRequestConfig = {
-        method: "post",
+        method: "post", 
         maxBodyLength: Infinity,
         url: `${this.apiUrl}/media`,
         headers: {

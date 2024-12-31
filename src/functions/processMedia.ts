@@ -1,4 +1,4 @@
-import { fileTypeFromBuffer } from "file-type";
+import { fromBuffer } from "file-type";
 
 async function processMedia(input: string | Buffer): Promise<{
   buffer: Buffer;
@@ -27,12 +27,13 @@ async function processMedia(input: string | Buffer): Promise<{
     }
   } else if (Buffer.isBuffer(input)) {
     buffer = input;
+
   } else {
     throw new Error("Invalid input type. Expected URL or Buffer.");
   }
 
   try {
-    const fileType = await fileTypeFromBuffer(buffer);
+    const fileType = await fromBuffer(buffer);
     
     if (fileType) {
       ext = fileType.ext;

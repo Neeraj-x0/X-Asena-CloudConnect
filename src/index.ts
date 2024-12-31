@@ -7,8 +7,9 @@
 
 import express, { Request, Response } from "express";
 import "dotenv/config";
+import { readAndRequireFiles } from "./functions";
+const { commands } = require("./functions/pluginHandler");
 import { WaMessage } from "./utils/Message";
-
 
 const app = express();
 app.use(express.json());
@@ -38,18 +39,40 @@ interface WebhookRequestBody {
   entry?: WebhookEntry[];
 }
 
+console.log("Starting server...");
 
-
-app.post("/webhook", async (req: Request<{}, {}, WebhookRequestBody>, res: Response) => {
-  console.log("Received webhook event");
-  const body = req.body;
-  const event = new WaMessage(body);
-  
-
-
-  res.sendStatus(200);
+console.log("Loading Plugins...");
+readAndRequireFiles("./src/plugins").then(() => {
+  console.log(`Loaded ${commands.length} plugins.`);
 });
 
+app.post(
+  "/webhook",
+  async (req: Request<{}, {}, WebhookRequestBody>, res: Response) => {
+    console.log("Received webhook event");
+    const body = req.body;
+    const event = new WaMessage(body);
+    if (event.type === "message" && event.messageType === "text") {
+      console.log(`Received message: ${event.messageBody}`);
+      const command = commands.find(
+        (cmd: { pattern: { test: (arg0: string) => any } }) => {
+          if (cmd.pattern) { 
+            console.log(`Checking command: ${cmd.pattern}`);
+            return cmd.pattern.test(event.messageBody as string);
+          }
+          return false;
+        }
+      );
+
+      if (command) {
+        console.log(`Executing command: ${command.pattern}`);
+        command.function(event,event.messageBody as string);
+      }
+    }
+
+    res.sendStatus(200);
+  }
+);
 
 app.get("/webhook", (req: Request, res: Response) => {
   const mode = req.query["hub.mode"];

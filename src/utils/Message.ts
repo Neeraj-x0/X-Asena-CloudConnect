@@ -4,7 +4,7 @@ export class WaMessage extends Base {
   constructor(data: any) {
     super(data);
   }
-
+  
   /**
    * Sends a message to the user.
    * @param message - The message to send.
@@ -13,3 +13,5 @@ export class WaMessage extends Base {
     this.sendMessage(id, { text: { body: message } });
   }
 }
+
+
