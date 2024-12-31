@@ -284,6 +284,12 @@ export class Base {
     }
   }
 
+  /**
+   * Sends a button message to the user.
+   * @param data - The button data to send.
+   * @param contextOptions - Additional context options for the message.
+   */
+
   async sendButtonText(
     data: {
       text: string;
@@ -316,6 +322,12 @@ export class Base {
       contextOptions
     );
   }
+
+  /**
+   * Sends a button message with media to the user.
+   * @param data - The button data to send.
+   * @param contextOptions - Additional context options for the message.
+   */
 
   async sendButtonMedia(
     data: {
@@ -360,6 +372,12 @@ export class Base {
       contextOptions
     );
   }
+
+  /**
+   * Sends a list message to the user.
+   * @param data - The list data to send.
+   * @param contextOptions - Additional context options for the message.
+   */
 
   async sendList(
     data: {
