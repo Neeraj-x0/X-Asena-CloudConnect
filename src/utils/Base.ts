@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import processMedia from "../functions/processMedia";
+import { isUrl } from "../functions";
 
 export class Base {
   id!: string;
@@ -17,7 +18,7 @@ export class Base {
 
   private apiUrl: string;
   private authToken: string;
-    phoneNumberId: any;
+  phoneNumberId: any;
 
   constructor(data: any) {
     this.apiUrl = process.env.API_URL || "";
@@ -75,7 +76,7 @@ export class Base {
   async sendMessage(
     id: string,
     message: Record<string, any>,
-    contextOptions: Record<string, any> = {}
+    context: Record<string, any> = {}
   ): Promise<void> {
     if (!id) {
       throw new Error("Recipient ID is required.");
@@ -83,13 +84,23 @@ export class Base {
     if (!message) {
       throw new Error("Message content is required.");
     }
-
+    if (context && typeof context !== "object") {
+      throw new Error("Context options must be an object.");
+    }
+    if (context.reply === true) {
+      context.message_id = this.id;
+      delete context.reply;
+    }
+    if (context.caption) {
+      delete context.caption;
+    }
     const data = JSON.stringify({
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: id,
+      type: Object.keys(message)[0],
       ...message,
-      ...contextOptions,
+      context,
     });
 
     const config: AxiosRequestConfig = {
@@ -113,14 +124,13 @@ export class Base {
 
   /**
    * Uploads media to WhatsApp using the official WhatsApp Business API.
-   * @param phoneNumberId - The phone number ID associated with your WhatsApp account.
-   * @param filePath - The URL or file path to the media to upload.
-   * @param mediaType - The media type (e.g., 'image/jpeg', 'video/mp4').
+
+   * @param filePath - The URL or file path or buffer to the media to upload.
+  
    */
   async uploadMedia(
-    filePath: string,
-    mediaType: string
-  ): Promise<{ id: string }> {
+    filePath: string | Buffer
+  ): Promise<{ id: string; mediaType: string }> {
     try {
       // Process the media (fetch, determine type, etc.)
       const { buffer, ext, mimeType, mediaType } = await processMedia(filePath);
@@ -132,13 +142,13 @@ export class Base {
       formData.append(
         "file",
         new Blob([buffer], { type: mimeType || "unknown" }),
-        `file.${ext}` 
+        `file.${ext}`
       );
       formData.append("type", mediaType || "file");
       formData.append("messaging_product", "whatsapp");
 
       const config: AxiosRequestConfig = {
-        method: "post", 
+        method: "post",
         maxBodyLength: Infinity,
         url: `${this.apiUrl}/media`,
         headers: {
@@ -148,8 +158,10 @@ export class Base {
         data: formData,
       };
 
-      const response = await axios.request(config);
-      return response.data; // Return media upload response
+      const { data } = await axios.request(config);
+      const res = { id: data.id, mediaType: mediaType || "unknown" };
+
+      return res;
     } catch (error) {
       console.error("Error uploading media:", error);
       throw error;
@@ -161,13 +173,12 @@ export class Base {
    * @param mediaId - The ID of the media to delete.
    * @param phoneNumberId - Optional phone number ID for deleting media.
    */
-  async deleteMedia(
-    mediaId: string,
-   
-  ): Promise<{ success: boolean }> {
+  async deleteMedia(mediaId: string): Promise<{ success: boolean }> {
     try {
       const url = `https://graph.facebook.com/v21.0/${mediaId}`;
-      const params = this.phoneNumberId ? { phone_number_id: this.phoneNumberId } : {};
+      const params = this.phoneNumberId
+        ? { phone_number_id: this.phoneNumberId }
+        : {};
 
       const response = await axios.delete(url, {
         headers: {
@@ -179,6 +190,61 @@ export class Base {
       return response.data;
     } catch (error) {
       console.error("Error deleting media:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sends a message to the user.
+   * @param message - The message to send.
+   */
+  async sendText(
+    message: string,
+
+    contextOptions: Record<string, any> = {}
+  ): Promise<void> {
+    this.sendMessage(
+      contextOptions.id || this.userId || this.userId,
+      { text: { body: message } },
+      contextOptions
+    );
+  }
+
+  async sendMedia(
+    data: string | Buffer,
+
+    contextOptions: Record<string, any> = {}
+  ): Promise<void> {
+    try {
+      const recipientId = contextOptions.id || this.userId;
+
+      if (typeof data === "string" && !isUrl(data)) {
+        return this.sendMessage(
+          recipientId,
+          {
+            text: {
+              body: data,
+            },
+          },
+          contextOptions
+        );
+      }
+
+      const { id: mediaId, mediaType } = await this.uploadMedia(data);
+
+      // Send the media message with the appropriate media type (image, video, etc.)
+      this.sendMessage(
+        recipientId,
+        {
+          [mediaType]: {
+            id: mediaId,
+            caption: contextOptions.caption,
+          },
+        },
+        contextOptions
+      );
+    } catch (error) {
+      console.error("Error sending media:", error);
       throw error;
     }
   }

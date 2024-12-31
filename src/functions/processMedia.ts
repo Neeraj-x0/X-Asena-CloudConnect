@@ -38,7 +38,7 @@ async function processMedia(input: string | Buffer): Promise<{
     if (fileType) {
       ext = fileType.ext;
       mimeType = fileType.mime;
-      mediaType = fileType.mime.startsWith("image/") ? "image" : null;
+      mediaType = fileType.mime.split("/")[0];
     } else {
       throw new Error("Could not determine file type.");
     }
