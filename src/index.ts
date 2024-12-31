@@ -51,22 +51,25 @@ app.post(
   async (req: Request<{}, {}, WebhookRequestBody>, res: Response) => {
     console.log("Received webhook event");
     const body = req.body;
+    //console.log(JSON.stringify(body, null, 2));
     const event = new WaMessage(body);
     if (event.type === "message" && event.messageType === "text") {
-      console.log(`Received message: ${event.messageBody}`);
       const command = commands.find(
         (cmd: { pattern: { test: (arg0: string) => any } }) => {
-          if (cmd.pattern) { 
+          if (cmd.pattern) {
             console.log(`Checking command: ${cmd.pattern}`);
-            return cmd.pattern.test(event.messageBody as string);
+            if (event.button_id) {
+              return cmd.pattern.test(event.button_id);
+            } else {
+              return cmd.pattern.test(event.messageBody as string);
+            }
           }
           return false;
         }
       );
-
       if (command) {
         console.log(`Executing command: ${command.pattern}`);
-        command.function(event,event.messageBody as string);
+        command.function(event, event.messageBody as string);
       }
     }
 

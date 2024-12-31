@@ -1,0 +1,18 @@
+{
+    "type": "message",
+    "apiUrl": "https://graph.facebook.com/v21.0/559240403930865",
+    "authToken": "EAASU7Tujew4BO0uzTCnzVMmyR7ZAxnCgzZC57eVHZB6B19OovbCtDi2TCPeIBQVCC29gA4oQgKT8fDGxizPqZBghmfnyZBHL3ZCP5zjOOYKjV5lAqsHjeFxbz2RJc5W1z9TxxkLd12L7Sn1AjCePpdqD9LnZBJQgZA7MjHT6YN2TUNmJOCfFTRY0uxQDE1RKZBFm6MgZDZD",
+    "phoneNumberId": "559240403930865",
+    "id": "wamid.HBgMOTE4MTEzOTIxODk4FQIAEhggMTI2NDFBNkVGMUVDRDU5Q0U4NjRCNTc2MDI3MDc4NjUA",
+    "timestamp": "1735657327",
+    "userName": "Neeraj",
+    "userId": "918113921898",
+    "messageType": "text",
+    "messageBody": "Option 1",
+    "message": {
+        "id": "button1",
+        "title": "Option 1"
+    },
+    
+    "button_id": "button1"
+}

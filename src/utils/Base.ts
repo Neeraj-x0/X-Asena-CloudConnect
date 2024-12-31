@@ -19,6 +19,8 @@ export class Base {
   private apiUrl: string;
   private authToken: string;
   phoneNumberId: any;
+  button_id: any;
+  description: any;
 
   constructor(data: any) {
     this.apiUrl = process.env.API_URL || "";
@@ -44,17 +46,42 @@ export class Base {
     if (!changes) {
       throw new Error("Invalid data format.");
     }
+
     const contactInfo = changes.contacts?.[0];
+
     if (changes.messages) {
       const message = changes.messages[0];
+
       this.id = message.id;
       this.type = "message";
-      this.messageType = message.type;
-      this.messageBody = message.text?.body || null;
-      this.message = { body: message.text?.body || "" };
       this.timestamp = message.timestamp;
       this.userName = contactInfo?.profile?.name || "";
       this.userId = contactInfo?.wa_id || "";
+
+      if (
+        message.type === "interactive" &&
+        message.interactive?.type === "button_reply"
+      ) {
+        const buttonReply = message.interactive.button_reply;
+        this.messageType = "text";
+        this.messageBody = buttonReply.title; // The button text
+        this.message = buttonReply; // Setting body to button text
+        this.button_id = buttonReply.id; // Adding button ID as a new property
+      } else if (
+        message.type === "interactive" &&
+        message.interactive?.type === "list_reply"
+      ) {
+        const listReply = message.interactive.list_reply;
+        this.messageType = "text";
+        this.messageBody = listReply.title; // The list text
+        this.message = listReply; // Setting body to list text
+        this.description = listReply.description; // Adding list description as a new property
+        this.button_id = listReply.id; // Adding list ID as a new property
+      } else {
+        this.messageType = message.type;
+        this.messageBody = message.text?.body || null;
+        this.message = { body: message.text?.body || "" };
+      }
     } else if (changes.statuses) {
       const status = changes.statuses[0];
       this.id = status.id;
@@ -94,14 +121,17 @@ export class Base {
     if (context.caption) {
       delete context.caption;
     }
-    const data = JSON.stringify({
+
+    const obj: Record<string, any> = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: id,
       type: Object.keys(message)[0],
       ...message,
-      context,
-    });
+      context: Object.keys(context || {}).length > 0 ? context : undefined,
+    };
+
+    const data = JSON.stringify(obj);
 
     const config: AxiosRequestConfig = {
       method: "post",
@@ -118,7 +148,11 @@ export class Base {
       const response = await axios.request(config);
       console.log("Message sent successfully:", JSON.stringify(response.data));
     } catch (error) {
-      console.error("Error sending message:", error);
+      if (error instanceof Error) {
+        console.error("Error sending message:", error);
+      } else {
+        console.error("An unknown error occurred:", error);
+      }
     }
   }
 
@@ -200,19 +234,20 @@ export class Base {
    */
   async sendText(
     message: string,
-
     contextOptions: Record<string, any> = {}
   ): Promise<void> {
-    this.sendMessage(
-      contextOptions.id || this.userId || this.userId,
-      { text: { body: message } },
-      contextOptions
-    );
+    const recipientId = contextOptions.id || this.userId;
+    this.sendMessage(recipientId, { text: { body: message } }, contextOptions);
   }
+
+  /**
+   * Sends media to the user.
+   * @param data - The media data to send.
+   * @param contextOptions - Additional context options for the message.
+   */
 
   async sendMedia(
     data: string | Buffer,
-
     contextOptions: Record<string, any> = {}
   ): Promise<void> {
     try {
@@ -247,5 +282,129 @@ export class Base {
       console.error("Error sending media:", error);
       throw error;
     }
+  }
+
+  async sendButtonText(
+    data: {
+      text: string;
+      buttons: { id: string; title: string; type: string }[];
+    },
+    contextOptions: Record<string, any> = {}
+  ): Promise<void> {
+    const recipientId = contextOptions.id || this.userId;
+
+    this.sendMessage(
+      recipientId,
+      {
+        interactive: {
+          type: "button",
+          body: {
+            text: data.text, // Set the text from the provided data
+          },
+          action: {
+            buttons: data.buttons.map((button) => ({
+              // Map the buttons to the required format
+              type: button.type || "reply",
+              reply: {
+                id: button.id,
+                title: button.title,
+              },
+            })),
+          },
+        },
+      },
+      contextOptions
+    );
+  }
+
+  async sendButtonMedia(
+    data: {
+      text: string;
+      media: string | Buffer;
+      footer?: string;
+      buttons: { id: string; title: string; type: string }[];
+    },
+    contextOptions: Record<string, any> = {}
+  ) {
+    const recipientId = contextOptions.id || this.userId;
+    console.log(data);
+    const { id, mediaType } = await this.uploadMedia(data.media);
+    this.sendMessage(
+      recipientId,
+      {
+        interactive: {
+          type: "button",
+          header: {
+            type: mediaType,
+            [mediaType]: {
+              id: id,
+            },
+          },
+          body: {
+            text: data.text,
+          },
+          footer: {
+            text: data.footer || "",
+          },
+          action: {
+            buttons: data.buttons.map((button) => ({
+              type: button.type || "reply",
+              reply: {
+                id: button.id,
+                title: button.title,
+              },
+            })),
+          },
+        },
+      },
+      contextOptions
+    );
+  }
+
+  async sendList(
+    data: {
+      header: string;
+      body: string;
+      footer: string;
+      button: string;
+      sections: {
+        title: string;
+        rows: { id: string; title: string; description: string }[];
+      }[];
+    },
+    contextOptions: Record<string, any> = {}
+  ): Promise<void> {
+    const recipientId = contextOptions.id || this.userId;
+
+    this.sendMessage(
+      recipientId,
+      {
+        interactive: {
+          type: "list",
+          header: {
+            type: "text",
+            text: data.header, // Set the header text
+          },
+          body: {
+            text: data.body, // Set the body text
+          },
+          footer: {
+            text: data.footer, // Set the footer text
+          },
+          action: {
+            button: data.button, // Set the button text
+            sections: data.sections.map((section) => ({
+              title: section.title,
+              rows: section.rows.map((row) => ({
+                id: row.id,
+                title: row.title,
+                description: row.description, // Map the rows in each section
+              })),
+            })),
+          },
+        },
+      },
+      contextOptions
+    );
   }
 }
