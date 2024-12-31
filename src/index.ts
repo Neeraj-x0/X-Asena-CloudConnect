@@ -6,9 +6,7 @@
  */
 
 import express, { Request, Response } from "express";
-import axios from "axios";
 import "dotenv/config";
-import parseMessage from "./utils/parseMessage";
 import { WaMessage } from "./utils/Message";
 
 
@@ -40,17 +38,18 @@ interface WebhookRequestBody {
   entry?: WebhookEntry[];
 }
 
+
+
 app.post("/webhook", async (req: Request<{}, {}, WebhookRequestBody>, res: Response) => {
   console.log("Received webhook event");
   const body = req.body;
   const event = new WaMessage(body);
-  if (event.userId) {
-    event.sendText(event.userId, "Hello from the webhook!");
-  } else {
-    console.error("userId is undefined");
-  }
+  
+
+
   res.sendStatus(200);
 });
+
 
 app.get("/webhook", (req: Request, res: Response) => {
   const mode = req.query["hub.mode"];

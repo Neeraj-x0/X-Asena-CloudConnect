@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig } from "axios";
+import processMedia from "../functions/processMedia";
 
 export class Base {
   id!: string;
@@ -16,10 +17,12 @@ export class Base {
 
   private apiUrl: string;
   private authToken: string;
+    phoneNumberId: any;
 
   constructor(data: any) {
     this.apiUrl = process.env.API_URL || "";
     this.authToken = process.env.GRAPH_API_TOKEN || "";
+    this.phoneNumberId = process.env.PHONE_NUMBER_ID || "";
 
     if (!this.apiUrl || !this.authToken) {
       throw new Error(
@@ -83,8 +86,6 @@ export class Base {
       throw new Error("Message content is required.");
     }
 
-   console.log(this.type)
-
     const data = JSON.stringify({
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -109,6 +110,78 @@ export class Base {
       console.log("Message sent successfully:", JSON.stringify(response.data));
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  }
+
+  /**
+   * Uploads media to WhatsApp using the official WhatsApp Business API.
+   * @param phoneNumberId - The phone number ID associated with your WhatsApp account.
+   * @param filePath - The URL or file path to the media to upload.
+   * @param mediaType - The media type (e.g., 'image/jpeg', 'video/mp4').
+   */
+  async uploadMedia(
+    filePath: string,
+    mediaType: string
+  ): Promise<{ id: string }> {
+    try {
+      // Process the media (fetch, determine type, etc.)
+      const { buffer, ext, mimeType, mediaType } = await processMedia(filePath);
+
+      const formData = new FormData();
+      if (!ext) {
+        throw new Error("File extension is null or undefined.");
+      }
+      formData.append(
+        "file",
+        new Blob([buffer], { type: mimeType || "unknown" }),
+        `file.${ext}`
+      );
+      formData.append("type", mediaType || "file");
+      formData.append("messaging_product", "whatsapp");
+
+      const config: AxiosRequestConfig = {
+        method: "post",
+        maxBodyLength: Infinity,
+        url: `${this.apiUrl}/media`,
+        headers: {
+          Authorization: `Bearer ${this.authToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+        data: formData,
+      };
+
+      const response = await axios.request(config);
+      return response.data; // Return media upload response
+    } catch (error) {
+      console.error("Error uploading media:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deletes uploaded media from WhatsApp using the WhatsApp Business Cloud API.
+   * @param mediaId - The ID of the media to delete.
+   * @param phoneNumberId - Optional phone number ID for deleting media.
+   */
+  async deleteMedia(
+    mediaId: string,
+   
+  ): Promise<{ success: boolean }> {
+    try {
+      const url = `https://graph.facebook.com/v21.0/${mediaId}`;
+      const params = this.phoneNumberId ? { phone_number_id: this.phoneNumberId } : {};
+
+      const response = await axios.delete(url, {
+        headers: {
+          Authorization: `Bearer ${this.authToken}`,
+        },
+        params,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error("Error deleting media:", error);
+      throw error;
     }
   }
 }
