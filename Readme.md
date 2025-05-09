@@ -1,4 +1,4 @@
-# X-Asena
+# X-Asena-CloudConnect
 
 **X-Asena** is a messaging platform built on the official WhatsApp Business API, designed to streamline communication with customers. It offers real-time, interactive messaging, including automated responses, media sharing, and secure communication.
 
@@ -17,12 +17,12 @@
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/x-asena.git
+    git clone https://github.com/yourusername/X-Asena-CloudConnect.git
     ```
 
 2. Navigate to the project directory:
     ```bash
-    cd x-asena
+    cd X-Asena-CloudConnect
     ```
 
 3. Install dependencies:
